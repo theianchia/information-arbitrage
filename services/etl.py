@@ -1,9 +1,14 @@
 import polars as pl
 
-from clients.alpha_vantage import fetch_latest_tech_news, get_unique_tickers_from_news, fetch_ohlcv_for_symbol
+from clients.alpha_vantage import (
+    fetch_latest_tech_news,
+    get_unique_tickers_from_news,
+    fetch_ohlcv_for_symbol,
+)
 from clients.clickhouse import get_clickhouse_client, init_clickhouse
 from services.news_ingestion import news_to_polars_df, insert_news_into_clickhouse
 from services.ohlcv_ingestion import ohlcv_to_polars_df, insert_ohlcv_into_clickhouse
+
 
 def seed_news_and_ohlcv():
     print("Alpha Vantage | Fetching latest tech news from Alpha Vantage")

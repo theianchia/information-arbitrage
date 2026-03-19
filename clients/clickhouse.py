@@ -3,6 +3,7 @@ import clickhouse_connect
 from config.constants import MARKET_DATA_DATABASE, TECH_NEWS_TABLE, STOCK_OHLCV_TABLE
 from config.settings import SETTINGS
 
+
 def get_clickhouse_client(database: str = "default"):
     return clickhouse_connect.get_client(
         host=SETTINGS.clickhouse_host,

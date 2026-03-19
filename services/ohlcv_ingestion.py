@@ -4,6 +4,7 @@ from config.constants import MARKET_DATA_DATABASE, STOCK_OHLCV_TABLE, LOOKBACK_D
 from typing import Dict, Any
 import datetime as dt
 
+
 def ohlcv_to_polars_df(data: Dict[str, Any]) -> pl.DataFrame:
     rows = []
     cutoff_date = dt.date.today() - dt.timedelta(days=LOOKBACK_DAYS)

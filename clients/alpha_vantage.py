@@ -1,13 +1,12 @@
 import requests
-import datetime as dt
 from typing import Any, Dict, List
 
-import polars as pl
 
 from config.settings import SETTINGS
 from config.constants import NEWS_LIMIT
 
 ALPHA_VANTAGE_BASE_URL = "https://www.alphavantage.co/query"
+
 
 def fetch_latest_tech_news() -> List[Dict[str, Any]]:
     params = {

@@ -4,8 +4,10 @@ import datetime as dt
 
 from config.constants import MARKET_DATA_DATABASE, TECH_NEWS_TABLE
 
+
 def news_to_polars_df(feed: List[Dict[str, Any]]) -> pl.DataFrame:
     import uuid
+
     rows = []
 
     for item in feed:
