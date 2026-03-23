@@ -46,4 +46,6 @@ def fetch_ohlcv_for_symbol(symbol: str) -> Dict[str, Any]:
 
     ts_key = "Time Series (Daily)"
     ts = data.get(ts_key, {})
+    if not ts:
+        print(f"Alpha Vantage | {data}")
     return ts
