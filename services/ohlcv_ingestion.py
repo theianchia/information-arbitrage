@@ -5,7 +5,7 @@ from typing import Dict, Any
 import datetime as dt
 
 
-def ohlcv_to_polars_df(data: Dict[str, Any]) -> pl.DataFrame:
+def ohlcv_to_polars_df(symbol: str, data: Dict[str, Any]) -> pl.DataFrame:
     rows = []
     cutoff_date = dt.date.today() - dt.timedelta(days=LOOKBACK_DAYS)
 
@@ -16,7 +16,7 @@ def ohlcv_to_polars_df(data: Dict[str, Any]) -> pl.DataFrame:
 
         rows.append(
             {
-                "symbol": data["symbol"],
+                "symbol": symbol,
                 "date": date_obj,
                 "open": float(values["1. open"]),
                 "high": float(values["2. high"]),

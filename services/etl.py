@@ -33,7 +33,7 @@ def seed_news_and_ohlcv():
         if not ticker_data:
             print(f"Alpha Vantage | No OHLCV data for {ticker}")
             continue
-        ticker_ohlcv_df = ohlcv_to_polars_df(ticker_data)
+        ticker_ohlcv_df = ohlcv_to_polars_df(ticker, ticker_data)
         all_ohlcv.append(ticker_ohlcv_df)
 
     if all_ohlcv:
