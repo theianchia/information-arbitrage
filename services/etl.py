@@ -2,29 +2,35 @@ import polars as pl
 
 from clients.alpha_vantage import (
     fetch_latest_tech_news,
-    get_unique_tickers_from_news,
     fetch_ohlcv_for_symbol,
 )
 from clients.clickhouse import get_clickhouse_client, init_clickhouse
-from services.news_ingestion import news_to_polars_df, insert_news_into_clickhouse
+from services.sentiment_ingestion import (
+    ticker_sentiment_to_polars_df,
+    insert_ticker_sentiment_into_clickhouse,
+)
 from services.ohlcv_ingestion import ohlcv_to_polars_df, insert_ohlcv_into_clickhouse
 
 
-def seed_news_and_ohlcv():
+def seed_sentiment_and_ohlcv():
     print("Alpha Vantage | Fetching latest tech news from Alpha Vantage")
     feed = fetch_latest_tech_news()
-    news_df = news_to_polars_df(feed)
-    print(f"Alpha Vantage | Got {news_df.height} news items")
+    sentiment_df = ticker_sentiment_to_polars_df(feed)
+    print(f"Alpha Vantage | Got {sentiment_df.height} ticker sentiment rows")
 
-    tickers = get_unique_tickers_from_news(feed)
+    tickers = (
+        sorted(sentiment_df["symbol"].unique().to_list())
+        if not sentiment_df.is_empty()
+        else []
+    )
     print(f"Alpha Vantage | Tickers extracted from news: {tickers}")
 
     print("ClickHouse | Connecting to ClickHouse")
     client = get_clickhouse_client()
     init_clickhouse(client)
 
-    print("ClickHouse | Inserting news into ClickHouse")
-    insert_news_into_clickhouse(client, news_df)
+    print("ClickHouse | Inserting ticker sentiment into ClickHouse")
+    insert_ticker_sentiment_into_clickhouse(client, sentiment_df)
 
     all_ohlcv = []
     for ticker in tickers:

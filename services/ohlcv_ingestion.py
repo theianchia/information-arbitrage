@@ -1,6 +1,6 @@
 import polars as pl
 
-from config.constants import MARKET_DATA_DATABASE, STOCK_OHLCV_TABLE, LOOKBACK_DAYS
+from config.constants import MARKET_DATA_DATABASE, TICKER_OHLCV_TABLE, LOOKBACK_DAYS
 from typing import Dict, Any
 import datetime as dt
 
@@ -49,7 +49,7 @@ def insert_ohlcv_into_clickhouse(client, df: pl.DataFrame):
     cols = list(df.columns)
     rows = df.select(cols).rows()
     client.insert(
-        f"{MARKET_DATA_DATABASE}.{STOCK_OHLCV_TABLE}",
+        f"{MARKET_DATA_DATABASE}.{TICKER_OHLCV_TABLE}",
         rows,
         column_names=cols,
     )

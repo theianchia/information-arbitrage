@@ -1,6 +1,6 @@
 MARKET_DATA_DATABASE = "market_data"
-TECH_NEWS_TABLE = "tech_news"
-STOCK_OHLCV_TABLE = "stock_ohlcv"
+TICKER_SENTIMENT_TABLE = "ticker_sentiment"
+TICKER_OHLCV_TABLE = "ticker_ohlcv"
 
 NEWS_LIMIT = 10
 LOOKBACK_DAYS = 30

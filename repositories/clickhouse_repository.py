@@ -1,7 +1,11 @@
 from typing import Any
 
 from clients.clickhouse import get_clickhouse_client, init_clickhouse
-from config.constants import MARKET_DATA_DATABASE, STOCK_OHLCV_TABLE, TECH_NEWS_TABLE
+from config.constants import (
+    MARKET_DATA_DATABASE,
+    TICKER_OHLCV_TABLE,
+    TICKER_SENTIMENT_TABLE,
+)
 
 
 def query_rows(sql: str) -> list[dict[str, Any]]:
@@ -11,16 +15,21 @@ def query_rows(sql: str) -> list[dict[str, Any]]:
     return [dict(zip(result.column_names, row)) for row in result.result_rows]
 
 
-def fetch_latest_news(limit: int) -> list[dict[str, Any]]:
+def fetch_latest_ticker_sentiment(limit: int) -> list[dict[str, Any]]:
     sql = f"""
     SELECT
         id,
+        symbol,
         title,
         url,
         time_published,
         source,
-        tickers
-    FROM {MARKET_DATA_DATABASE}.{TECH_NEWS_TABLE}
+        relevance_score,
+        ticker_sentiment_score,
+        ticker_sentiment_label,
+        overall_sentiment_score,
+        overall_sentiment_label
+    FROM {MARKET_DATA_DATABASE}.{TICKER_SENTIMENT_TABLE}
     ORDER BY time_published DESC
     LIMIT {limit}
     """
@@ -30,8 +39,8 @@ def fetch_latest_news(limit: int) -> list[dict[str, Any]]:
 def fetch_relevant_stock_data(price_lookback_days: int) -> list[dict[str, Any]]:
     sql = f"""
     WITH relevant_tickers AS (
-        SELECT DISTINCT arrayJoin(tickers) AS symbol
-        FROM {MARKET_DATA_DATABASE}.{TECH_NEWS_TABLE}
+        SELECT DISTINCT symbol
+        FROM {MARKET_DATA_DATABASE}.{TICKER_SENTIMENT_TABLE}
         WHERE time_published >= now() - INTERVAL 7 DAY
     )
     SELECT
@@ -42,7 +51,7 @@ def fetch_relevant_stock_data(price_lookback_days: int) -> list[dict[str, Any]]:
         o.low,
         o.close,
         o.volume
-    FROM {MARKET_DATA_DATABASE}.{STOCK_OHLCV_TABLE} AS o
+    FROM {MARKET_DATA_DATABASE}.{TICKER_OHLCV_TABLE} AS o
     INNER JOIN relevant_tickers r ON o.symbol = r.symbol
     WHERE o.date >= today() - INTERVAL {price_lookback_days} DAY
     ORDER BY o.symbol, o.date DESC
@@ -56,10 +65,11 @@ def fetch_news_stock_analytics(
     sql = f"""
     WITH news_ticker AS (
         SELECT
-            arrayJoin(tickers) AS symbol,
+            symbol,
             count() AS news_count,
-            max(time_published) AS latest_news_time
-        FROM {MARKET_DATA_DATABASE}.{TECH_NEWS_TABLE}
+            max(time_published) AS latest_news_time,
+            round(avg(ticker_sentiment_score), 4) AS avg_ticker_sentiment_score
+        FROM {MARKET_DATA_DATABASE}.{TICKER_SENTIMENT_TABLE}
         WHERE time_published >= now() - INTERVAL {news_lookback_days} DAY
         GROUP BY symbol
     ),
@@ -74,7 +84,7 @@ def fetch_news_stock_analytics(
             min(low) AS min_low,
             max(high) AS max_high,
             sum(volume) AS total_volume
-        FROM {MARKET_DATA_DATABASE}.{STOCK_OHLCV_TABLE}
+        FROM {MARKET_DATA_DATABASE}.{TICKER_OHLCV_TABLE}
         WHERE date >= today() - INTERVAL {price_lookback_days} DAY
         GROUP BY symbol
     )
@@ -82,6 +92,7 @@ def fetch_news_stock_analytics(
         n.symbol,
         n.news_count,
         n.latest_news_time,
+        n.avg_ticker_sentiment_score,
         p.first_date,
         p.last_date,
         p.first_close,

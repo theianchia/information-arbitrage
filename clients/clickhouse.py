@@ -1,6 +1,10 @@
 import clickhouse_connect
 
-from config.constants import MARKET_DATA_DATABASE, TECH_NEWS_TABLE, STOCK_OHLCV_TABLE
+from config.constants import (
+    MARKET_DATA_DATABASE,
+    TICKER_SENTIMENT_TABLE,
+    TICKER_OHLCV_TABLE,
+)
 from config.settings import SETTINGS
 
 
@@ -19,22 +23,27 @@ def init_clickhouse(client):
 
     client.command(
         f"""
-        CREATE TABLE IF NOT EXISTS {MARKET_DATA_DATABASE}.{TECH_NEWS_TABLE} (
+        CREATE TABLE IF NOT EXISTS {MARKET_DATA_DATABASE}.{TICKER_SENTIMENT_TABLE} (
             id String,
-            title String,
-            url String,
+            symbol String,
             time_published DateTime,
             source String,
-            tickers Array(String)
+            title String,
+            url String,
+            relevance_score Float64,
+            ticker_sentiment_score Float64,
+            ticker_sentiment_label String,
+            overall_sentiment_score Float64,
+            overall_sentiment_label String
         )
         ENGINE = MergeTree
-        ORDER BY (time_published, id)
+        ORDER BY (symbol, time_published, id)
         """
     )
 
     client.command(
         f"""
-        CREATE TABLE IF NOT EXISTS {MARKET_DATA_DATABASE}.{STOCK_OHLCV_TABLE} (
+        CREATE TABLE IF NOT EXISTS {MARKET_DATA_DATABASE}.{TICKER_OHLCV_TABLE} (
             symbol String,
             date Date,
             open Float64,
