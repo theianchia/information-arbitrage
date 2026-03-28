@@ -1,4 +1,4 @@
-from services.etl import seed_news_and_ohlcv
+from services.application.etl import seed_sentiment_and_ohlcv
 
 if __name__ == "__main__":
-    seed_news_and_ohlcv()
+    seed_sentiment_and_ohlcv("AAPL")

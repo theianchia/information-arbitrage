@@ -6,9 +6,12 @@ from typing import Any
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
-from services.analytics_service import get_news_stock_analytics
-from services.etl import seed_news_and_ohlcv
-from services.query_service import get_latest_news, get_relevant_stock_data
+from services.application.analytics_service import get_news_stock_analytics
+from services.application.etl import seed_sentiment_and_ohlcv
+from services.application.query_service import (
+    get_latest_ticker_sentiment,
+    get_relevant_stock_data,
+)
 
 
 load_dotenv()
@@ -24,15 +27,27 @@ Always support conclusions with tool outputs and call out sample-size limitation
 TOOLS: list[dict[str, Any]] = [
     {
         "name": "refresh_market_data",
-        "description": "Pull latest tech news and related OHLCV data into ClickHouse.",
-        "input_schema": {"type": "object", "properties": {}, "required": []},
-    },
-    {
-        "name": "get_latest_news",
-        "description": "Get latest news rows from ClickHouse.",
+        "description": "Pull latest ticker sentiment and related OHLCV data into ClickHouse.",
         "input_schema": {
             "type": "object",
-            "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 100}},
+            "properties": {"ticker": {"type": "string"}},
+            "required": [],
+        },
+    },
+    {
+        "name": "get_latest_ticker_sentiment",
+        "description": "Get latest ticker sentiment rows from ClickHouse.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "ticker": {"type": "string"},
+                "limit": {"type": "integer", "minimum": 1, "maximum": 100},
+                "semantic_similarity_threshold": {
+                    "type": "number",
+                    "minimum": 0.0,
+                    "maximum": 1.0,
+                },
+            },
             "required": [],
         },
     },
@@ -54,7 +69,11 @@ TOOLS: list[dict[str, Any]] = [
             "type": "object",
             "properties": {
                 "news_lookback_days": {"type": "integer", "minimum": 1, "maximum": 90},
-                "price_lookback_days": {"type": "integer", "minimum": 1, "maximum": 365},
+                "price_lookback_days": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 365,
+                },
                 "top_n": {"type": "integer", "minimum": 1, "maximum": 100},
             },
             "required": [],
@@ -65,10 +84,16 @@ TOOLS: list[dict[str, Any]] = [
 
 def run_tool(name: str, tool_input: dict[str, Any]) -> Any:
     if name == "refresh_market_data":
-        seed_news_and_ohlcv()
+        seed_sentiment_and_ohlcv(tool_input.get("ticker", "AAPL"))
         return {"status": "ok", "message": "Market data refreshed successfully."}
-    if name == "get_latest_news":
-        return get_latest_news(limit=tool_input.get("limit", 10))
+    if name == "get_latest_ticker_sentiment":
+        return get_latest_ticker_sentiment(
+            ticker=tool_input.get("ticker", "AAPL"),
+            limit=tool_input.get("limit", 10),
+            semantic_similarity_threshold=tool_input.get(
+                "semantic_similarity_threshold", 0.8
+            ),
+        )
     if name == "get_relevant_stock_data":
         return get_relevant_stock_data(
             price_lookback_days=tool_input.get("price_lookback_days", 30)
@@ -132,11 +157,15 @@ def ask_claude_with_tools(user_prompt: str, model: str, max_rounds: int = 8) -> 
 
         messages.append({"role": "user", "content": tool_results})
 
-    raise RuntimeError("Claude tool loop exceeded max rounds; increase max_rounds if needed.")
+    raise RuntimeError(
+        "Claude tool loop exceeded max rounds; increase max_rounds if needed."
+    )
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run Claude API with local market tools.")
+    parser = argparse.ArgumentParser(
+        description="Run Claude API with local market tools."
+    )
     parser.add_argument(
         "--model",
         default="claude-sonnet-4-5",

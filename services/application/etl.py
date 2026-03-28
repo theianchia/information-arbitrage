@@ -1,20 +1,23 @@
 import polars as pl
 
 from clients.alpha_vantage import (
-    fetch_latest_tech_news,
+    fetch_latest_news_sentiment_for_ticker,
     fetch_ohlcv_for_symbol,
 )
 from clients.clickhouse import get_clickhouse_client, init_clickhouse
-from services.sentiment_ingestion import (
+from services.ingestion.sentiment_ingestion import (
     ticker_sentiment_to_polars_df,
     insert_ticker_sentiment_into_clickhouse,
 )
-from services.ohlcv_ingestion import ohlcv_to_polars_df, insert_ohlcv_into_clickhouse
+from services.ingestion.ohlcv_ingestion import (
+    ohlcv_to_polars_df,
+    insert_ohlcv_into_clickhouse,
+)
 
 
-def seed_sentiment_and_ohlcv():
+def seed_sentiment_and_ohlcv(ticker: str):
     print("Alpha Vantage | Fetching latest tech news from Alpha Vantage")
-    feed = fetch_latest_tech_news()
+    feed = fetch_latest_news_sentiment_for_ticker(ticker)
     sentiment_df = ticker_sentiment_to_polars_df(feed)
     print(f"Alpha Vantage | Got {sentiment_df.height} ticker sentiment rows")
 

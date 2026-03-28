@@ -22,7 +22,7 @@ def ticker_sentiment_to_polars_df(feed: List[Dict[str, Any]]) -> pl.DataFrame:
             if not ticker:
                 continue
 
-            # Use URL + ticker + time_published as a stable key.
+            # Use URL + ticker + time_published as a stable key for deduplication
             base = f"{item.get('url', '')}|{ticker}|{time_published_str or ''}"
             stable_id = str(uuid.uuid5(uuid.NAMESPACE_URL, base))
 
@@ -33,6 +33,7 @@ def ticker_sentiment_to_polars_df(feed: List[Dict[str, Any]]) -> pl.DataFrame:
                     "time_published": dt_obj,
                     "source": item.get("source", ""),
                     "title": item.get("title", ""),
+                    "summary": item.get("summary", ""),
                     "url": item.get("url", ""),
                     "relevance_score": float(ts.get("relevance_score", 0)),
                     "ticker_sentiment_score": float(

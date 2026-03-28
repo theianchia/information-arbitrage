@@ -3,35 +3,25 @@ from typing import Any, Dict, List
 
 
 from config.settings import SETTINGS
-from config.constants import NEWS_LIMIT
+from config.constants import TICKER_SENTIMENT_LIMIT
 
 ALPHA_VANTAGE_BASE_URL = "https://www.alphavantage.co/query"
 
 
-def fetch_latest_tech_news() -> List[Dict[str, Any]]:
+def fetch_latest_news_sentiment_for_ticker(
+    ticker: str, limit: int = TICKER_SENTIMENT_LIMIT
+) -> List[Dict[str, Any]]:
     params = {
         "function": "NEWS_SENTIMENT",
-        "topics": "technology",
+        "tickers": ticker,
         "sort": "LATEST",
-        "time_from": "",  # let API decide; we just limit by `NEWS_LIMIT`
         "apikey": SETTINGS.alpha_vantage_api_key,
     }
     resp = requests.get(ALPHA_VANTAGE_BASE_URL, params=params, timeout=30)
     resp.raise_for_status()
     data = resp.json()
-
     feed = data.get("feed", [])
-    return feed[:NEWS_LIMIT]
-
-
-def get_unique_tickers_from_news(feed: List[Dict[str, Any]]) -> List[str]:
-    tickers = set()
-    for item in feed:
-        for ts in item.get("ticker_sentiment", []):
-            ticker = ts.get("ticker")
-            if ticker:
-                tickers.add(ticker)
-    return sorted(tickers)
+    return feed[:limit]
 
 
 def fetch_ohlcv_for_symbol(symbol: str) -> Dict[str, Any]:

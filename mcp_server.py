@@ -2,11 +2,11 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from services.analytics_service import (
+from services.application.analytics_service import (
     get_news_stock_analytics as run_news_stock_analytics,
 )
-from services.etl import seed_sentiment_and_ohlcv
-from services.query_service import (
+from services.application.etl import seed_sentiment_and_ohlcv
+from services.application.query_service import (
     get_latest_ticker_sentiment as run_latest_ticker_sentiment_query,
     get_relevant_stock_data as run_relevant_stock_query,
 )
@@ -16,20 +16,31 @@ mcp = FastMCP("market-intel")
 
 
 @mcp.tool()
-def refresh_market_data() -> dict[str, str]:
+def refresh_market_data(ticker: str = "AAPL") -> dict[str, str]:
     """
     Pull latest ticker sentiment and related OHLCV into ClickHouse.
+
+    Pass `ticker` (e.g. MSFT, NVDA) to refresh data for that symbol; other tickers
+    mentioned in the same news feed are still ingested for OHLCV follow-up.
     """
-    seed_sentiment_and_ohlcv()
+    seed_sentiment_and_ohlcv(ticker.strip().upper())
     return {"status": "ok", "message": "Market data refreshed successfully."}
 
 
 @mcp.tool()
-def get_latest_ticker_sentiment(limit: int = 10) -> list[dict[str, Any]]:
+def get_latest_ticker_sentiment(
+    ticker: str,
+    limit: int = 20,
+    semantic_similarity_threshold: float = 0.8,
+) -> list[dict[str, Any]]:
     """
-    Retrieve latest ticker sentiment rows from ClickHouse.
+    Retrieve latest ticker sentiment from ClickHouse and semantically deduplicate similar news.
     """
-    return run_latest_ticker_sentiment_query(limit)
+    return run_latest_ticker_sentiment_query(
+        ticker=ticker,
+        limit=limit,
+        semantic_similarity_threshold=semantic_similarity_threshold,
+    )
 
 
 @mcp.tool()

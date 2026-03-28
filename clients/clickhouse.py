@@ -29,6 +29,7 @@ def init_clickhouse(client):
             time_published DateTime,
             source String,
             title String,
+            summary String,
             url String,
             relevance_score Float64,
             ticker_sentiment_score Float64,

@@ -15,12 +15,20 @@ def query_rows(sql: str) -> list[dict[str, Any]]:
     return [dict(zip(result.column_names, row)) for row in result.result_rows]
 
 
-def fetch_latest_ticker_sentiment(limit: int) -> list[dict[str, Any]]:
+def fetch_latest_ticker_sentiment(
+    ticker: str | None = None, limit: int = 20
+) -> list[dict[str, Any]]:
+    where_clause = ""
+    if ticker:
+        safe_ticker = ticker.replace("'", "''").upper()
+        where_clause = f"WHERE symbol = '{safe_ticker}'"
+
     sql = f"""
     SELECT
         id,
         symbol,
         title,
+        summary,
         url,
         time_published,
         source,
@@ -30,6 +38,7 @@ def fetch_latest_ticker_sentiment(limit: int) -> list[dict[str, Any]]:
         overall_sentiment_score,
         overall_sentiment_label
     FROM {MARKET_DATA_DATABASE}.{TICKER_SENTIMENT_TABLE}
+    {where_clause}
     ORDER BY time_published DESC
     LIMIT {limit}
     """
