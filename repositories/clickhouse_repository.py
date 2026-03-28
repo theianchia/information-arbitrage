@@ -15,14 +15,12 @@ def query_rows(sql: str) -> list[dict[str, Any]]:
     return [dict(zip(result.column_names, row)) for row in result.result_rows]
 
 
-def fetch_latest_ticker_sentiment(
-    ticker: str | None = None, limit: int = 20
+def fetch_ticker_sentiment_in_window(
+    ticker: str, lookback_days: int, max_rows: int = 2000
 ) -> list[dict[str, Any]]:
-    where_clause = ""
-    if ticker:
-        safe_ticker = ticker.replace("'", "''").upper()
-        where_clause = f"WHERE symbol = '{safe_ticker}'"
-
+    safe_ticker = ticker.replace("'", "''").upper()
+    safe_days = max(1, min(int(lookback_days), 365))
+    safe_max = max(1, min(int(max_rows), 5000))
     sql = f"""
     SELECT
         id,
@@ -38,82 +36,31 @@ def fetch_latest_ticker_sentiment(
         overall_sentiment_score,
         overall_sentiment_label
     FROM {MARKET_DATA_DATABASE}.{TICKER_SENTIMENT_TABLE}
-    {where_clause}
+    WHERE symbol = '{safe_ticker}'
+        AND time_published >= now() - INTERVAL {safe_days} DAY
     ORDER BY time_published DESC
-    LIMIT {limit}
+    LIMIT {safe_max}
     """
     return query_rows(sql)
 
 
-def fetch_relevant_stock_data(price_lookback_days: int) -> list[dict[str, Any]]:
-    sql = f"""
-    WITH relevant_tickers AS (
-        SELECT DISTINCT symbol
-        FROM {MARKET_DATA_DATABASE}.{TICKER_SENTIMENT_TABLE}
-        WHERE time_published >= now() - INTERVAL 7 DAY
-    )
-    SELECT
-        o.symbol,
-        o.date,
-        o.open,
-        o.high,
-        o.low,
-        o.close,
-        o.volume
-    FROM {MARKET_DATA_DATABASE}.{TICKER_OHLCV_TABLE} AS o
-    INNER JOIN relevant_tickers r ON o.symbol = r.symbol
-    WHERE o.date >= today() - INTERVAL {price_lookback_days} DAY
-    ORDER BY o.symbol, o.date DESC
-    """
-    return query_rows(sql)
-
-
-def fetch_news_stock_analytics(
-    news_lookback_days: int, price_lookback_days: int, top_n: int
+def fetch_ticker_ohlcv_in_window(
+    ticker: str, lookback_days: int
 ) -> list[dict[str, Any]]:
+    safe_ticker = ticker.replace("'", "''").upper()
+    safe_days = max(1, min(int(lookback_days), 365))
     sql = f"""
-    WITH news_ticker AS (
-        SELECT
-            symbol,
-            count() AS news_count,
-            max(time_published) AS latest_news_time,
-            round(avg(ticker_sentiment_score), 4) AS avg_ticker_sentiment_score
-        FROM {MARKET_DATA_DATABASE}.{TICKER_SENTIMENT_TABLE}
-        WHERE time_published >= now() - INTERVAL {news_lookback_days} DAY
-        GROUP BY symbol
-    ),
-    price_agg AS (
-        SELECT
-            symbol,
-            min(date) AS first_date,
-            max(date) AS last_date,
-            argMin(close, date) AS first_close,
-            argMax(close, date) AS last_close,
-            avg(close) AS avg_close,
-            min(low) AS min_low,
-            max(high) AS max_high,
-            sum(volume) AS total_volume
-        FROM {MARKET_DATA_DATABASE}.{TICKER_OHLCV_TABLE}
-        WHERE date >= today() - INTERVAL {price_lookback_days} DAY
-        GROUP BY symbol
-    )
     SELECT
-        n.symbol,
-        n.news_count,
-        n.latest_news_time,
-        n.avg_ticker_sentiment_score,
-        p.first_date,
-        p.last_date,
-        p.first_close,
-        p.last_close,
-        round(p.avg_close, 4) AS avg_close,
-        p.min_low,
-        p.max_high,
-        p.total_volume,
-        round(((p.last_close - p.first_close) / nullIf(p.first_close, 0)) * 100, 4) AS pct_change
-    FROM news_ticker n
-    INNER JOIN price_agg p ON n.symbol = p.symbol
-    ORDER BY n.news_count DESC, pct_change DESC
-    LIMIT {top_n}
+        symbol,
+        date,
+        open,
+        high,
+        low,
+        close,
+        volume
+    FROM {MARKET_DATA_DATABASE}.{TICKER_OHLCV_TABLE}
+    WHERE symbol = '{safe_ticker}'
+        AND date >= today() - INTERVAL {safe_days} DAY
+    ORDER BY date ASC
     """
     return query_rows(sql)

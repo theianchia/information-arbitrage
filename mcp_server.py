@@ -2,17 +2,11 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from services.application.analytics_service import (
-    get_news_stock_analytics as run_news_stock_analytics,
-)
+from services.application.analytics import get_ticker_sentiment_price_analytics as run_ticker_sentiment_price_analytics
 from services.application.etl import seed_sentiment_and_ohlcv
-from services.application.query_service import (
-    get_latest_ticker_sentiment as run_latest_ticker_sentiment_query,
-    get_relevant_stock_data as run_relevant_stock_query,
-)
 
 
-mcp = FastMCP("market-intel")
+mcp = FastMCP("info-arb")
 
 
 @mcp.tool()
@@ -28,39 +22,27 @@ def refresh_market_data(ticker: str = "AAPL") -> dict[str, str]:
 
 
 @mcp.tool()
-def get_latest_ticker_sentiment(
+def get_ticker_sentiment_price_analytics(
     ticker: str,
-    limit: int = 20,
+    sentiment_lookback_days: int = 90,
+    price_lookback_days: int = 90,
     semantic_similarity_threshold: float = 0.8,
-) -> list[dict[str, Any]]:
+    sentiment_roll_short: int = 5,
+    sentiment_roll_long: int = 20,
+) -> dict[str, Any]:
     """
-    Retrieve latest ticker sentiment from ClickHouse and semantically deduplicate similar news.
+    For one ticker: load sentiment + OHLCV from ClickHouse, deduplicate sentiments by embedding
+    cosine similarity, then return rolling sentiment stats (vs typical) and price indicators
+    (period VWAP, rolling VWAP, SMAs, RSI, ATR, Bollinger when SMA-20 exists).
     """
-    return run_latest_ticker_sentiment_query(
+    return run_ticker_sentiment_price_analytics(
         ticker=ticker,
-        limit=limit,
+        sentiment_lookback_days=sentiment_lookback_days,
+        price_lookback_days=price_lookback_days,
         semantic_similarity_threshold=semantic_similarity_threshold,
+        sentiment_roll_short=sentiment_roll_short,
+        sentiment_roll_long=sentiment_roll_long,
     )
-
-
-@mcp.tool()
-def get_relevant_stock_data(price_lookback_days: int = 30) -> list[dict[str, Any]]:
-    """
-    Retrieve OHLCV rows for symbols appearing in recent sentiment data.
-    """
-    return run_relevant_stock_query(price_lookback_days)
-
-
-@mcp.tool()
-def get_news_stock_analytics(
-    news_lookback_days: int = 7,
-    price_lookback_days: int = 30,
-    top_n: int = 20,
-) -> list[dict[str, Any]]:
-    """
-    Aggregate sentiment and stock metrics per ticker.
-    """
-    return run_news_stock_analytics(news_lookback_days, price_lookback_days, top_n)
 
 
 if __name__ == "__main__":

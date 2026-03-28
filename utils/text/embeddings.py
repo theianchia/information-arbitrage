@@ -1,3 +1,7 @@
+"""Lightweight hashed text embeddings for similarity (no external model)."""
+
+from __future__ import annotations
+
 import hashlib
 import math
 import re

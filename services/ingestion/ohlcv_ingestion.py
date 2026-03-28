@@ -1,13 +1,13 @@
 import polars as pl
 
-from config.constants import MARKET_DATA_DATABASE, TICKER_OHLCV_TABLE, LOOKBACK_DAYS
-from typing import Dict, Any
+from config.constants import MARKET_DATA_DATABASE, TICKER_OHLCV_TABLE, TICKER_OHLCV_LOOKBACK_DAYS
+from typing import Any
 import datetime as dt
 
 
-def ohlcv_to_polars_df(symbol: str, data: Dict[str, Any]) -> pl.DataFrame:
+def ohlcv_to_polars_df(symbol: str, data: dict[str, Any]) -> pl.DataFrame:
     rows = []
-    cutoff_date = dt.date.today() - dt.timedelta(days=LOOKBACK_DAYS)
+    cutoff_date = dt.date.today() - dt.timedelta(days=TICKER_OHLCV_LOOKBACK_DAYS)
 
     for date_str, values in data.items():
         date_obj = dt.datetime.strptime(date_str, "%Y-%m-%d").date()
