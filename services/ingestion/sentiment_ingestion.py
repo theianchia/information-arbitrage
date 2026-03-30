@@ -6,7 +6,9 @@ import uuid
 from config.constants import MARKET_DATA_DATABASE, TICKER_SENTIMENT_TABLE
 
 
-def ticker_sentiment_to_polars_df(feed: List[Dict[str, Any]]) -> pl.DataFrame:
+def ticker_sentiment_to_polars_df(
+    feed: List[Dict[str, Any]], target_ticker: str
+) -> pl.DataFrame:
     rows = []
 
     for item in feed:
@@ -19,7 +21,7 @@ def ticker_sentiment_to_polars_df(feed: List[Dict[str, Any]]) -> pl.DataFrame:
         ticker_sentiment = item.get("ticker_sentiment", [])
         for ts in ticker_sentiment:
             ticker = ts.get("ticker")
-            if not ticker:
+            if not ticker or ticker.upper() != target_ticker.upper():
                 continue
 
             # Use URL + ticker + time_published as a stable key for deduplication
@@ -29,7 +31,7 @@ def ticker_sentiment_to_polars_df(feed: List[Dict[str, Any]]) -> pl.DataFrame:
             rows.append(
                 {
                     "id": stable_id,
-                    "symbol": ticker,
+                    "symbol": target_ticker.upper(),
                     "time_published": dt_obj,
                     "source": item.get("source", ""),
                     "title": item.get("title", ""),

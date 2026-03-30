@@ -16,12 +16,13 @@ def fetch_latest_news_sentiment_for_ticker(
         "tickers": ticker,
         "sort": "LATEST",
         "apikey": SETTINGS.alpha_vantage_api_key,
+        "limit": limit,
     }
     resp = requests.get(ALPHA_VANTAGE_BASE_URL, params=params, timeout=30)
     resp.raise_for_status()
     data = resp.json()
     feed = data.get("feed", [])
-    return feed[:limit]
+    return feed
 
 
 def fetch_ohlcv_for_symbol(symbol: str) -> Dict[str, Any]:
