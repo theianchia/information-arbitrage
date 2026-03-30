@@ -6,6 +6,7 @@ from typing import Any
 from anthropic import Anthropic
 from dotenv import load_dotenv
 
+from services.application.analytics import get_ticker_sentiment_price_analytics
 from services.application.etl import seed_sentiment_and_ohlcv
 
 
@@ -29,6 +30,46 @@ TOOLS: list[dict[str, Any]] = [
             "required": [],
         },
     },
+    {
+        "name": "get_ticker_sentiment_price_analytics",
+        "description": (
+            "For one ticker: read sentiment + OHLCV from ClickHouse, deduplicate similar "
+            "news by embedding similarity, return rolling sentiment stats (vs typical) and "
+            "price indicators (VWAP, SMAs, RSI, ATR, Bollinger)."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "ticker": {"type": "string", "description": "Stock symbol, e.g. AAPL"},
+                "sentiment_lookback_days": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 365,
+                },
+                "price_lookback_days": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 365,
+                },
+                "semantic_similarity_threshold": {
+                    "type": "number",
+                    "minimum": 0.0,
+                    "maximum": 1.0,
+                },
+                "sentiment_roll_short": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100,
+                },
+                "sentiment_roll_long": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 200,
+                },
+            },
+            "required": ["ticker"],
+        },
+    },
 ]
 
 
@@ -36,6 +77,17 @@ def run_tool(name: str, tool_input: dict[str, Any]) -> Any:
     if name == "refresh_market_data":
         seed_sentiment_and_ohlcv(tool_input.get("ticker", "AAPL"))
         return {"status": "ok", "message": "Market data refreshed successfully."}
+    if name == "get_ticker_sentiment_price_analytics":
+        return get_ticker_sentiment_price_analytics(
+            ticker=tool_input["ticker"],
+            sentiment_lookback_days=tool_input.get("sentiment_lookback_days", 90),
+            price_lookback_days=tool_input.get("price_lookback_days", 90),
+            semantic_similarity_threshold=tool_input.get(
+                "semantic_similarity_threshold", 0.8
+            ),
+            sentiment_roll_short=tool_input.get("sentiment_roll_short", 5),
+            sentiment_roll_long=tool_input.get("sentiment_roll_long", 20),
+        )
     raise ValueError(f"Unknown tool: {name}")
 
 
